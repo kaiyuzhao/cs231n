@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+def softmax(x):
+    x -= np.max(x)
+    return np.exp(x) / np.sum(np.exp(x))
 
 class TwoLayerNet(object):
   """
@@ -99,9 +102,6 @@ class TwoLayerNet(object):
     # classifier loss. So that your results match ours, multiply the            #
     # regularization loss by 0.5                                                #
     #############################################################################
-    def softmax(x):
-        x -= np.max(x)
-        return np.exp(x) / np.sum(np.exp(x))
     prob = np.apply_along_axis(softmax, 1, z2)
     jtheta = np.zeros(prob.shape)
     jtheta[range(prob.shape[0]), y] = -np.log(prob[range(prob.shape[0]), y])
@@ -130,14 +130,20 @@ class TwoLayerNet(object):
     # g_w2 = np.dot(ddot, X)
 
 
-    delta3 = prob
-    delta3[range(prob.shape[0]), y] -= 1.0
-
-    grads['W1'] = ((X.T).dot(prob.dot(W2.T))) + reg * W1
-    grads['b1'] = prob.dot(W2.T)
+    delta3 = prob # N by C
+    # W2 # H * C
+    # W1 # N * H
+    delta3[range(prob.shape[0]), y] -= 1.0 # error
+    delta3 = delta3 / prob.shape[0]
     grads['W2'] = (a1.T).dot(delta3) + reg * W2
-    grads['b2'] = np.sum(delta3, axis=0, keepdims=True)
-    
+    grads['b2'] = np.sum(delta3, axis=0)
+    dz1 = a1
+    dz1[dz1 > 0] = 1 # dz1 is actually derivative of ReLU applied to z1
+    delta2 = delta3.dot(W2.T) * dz1
+    grads['W1'] = (X.T).dot(delta2) + reg * W1
+    grads['b1'] = np.sum(delta2, axis=0)
+    #print grads['b1']
+
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -183,11 +189,10 @@ class TwoLayerNet(object):
       #########################################################################
       idx = np.random.choice(X.shape[0], min(batch_size, X.shape[0]), replace=False)
       X_batch = X[idx, :]
-      Y_batch = y[idx]
+      y_batch = y[idx]
       #########################################################################
       #                             END OF YOUR CODE                          #
       #########################################################################
-
       # Compute loss and gradients using the current minibatch
       loss, grads = self.loss(X_batch, y=y_batch, reg=reg)
       loss_history.append(loss)
@@ -246,7 +251,13 @@ class TwoLayerNet(object):
     ###########################################################################
     # TODO: Implement this function; it should be VERY simple!                #
     ###########################################################################
-    pass
+    W1 = self.params['W1']
+    b1 = self.params['b1']
+    W2 = self.params['W2']
+    b2 = self.params['b2']
+    pred = (X.dot(W1) + b1).clip(0).dot(W2) + b2
+    prob = np.apply_along_axis(softmax, 1, pred)
+    y_pred = np.apply_along_axis(np.argmax, 1, prob)
     ###########################################################################
     #                              END OF YOUR CODE                           #
     ###########################################################################
