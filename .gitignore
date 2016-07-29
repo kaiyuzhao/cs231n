@@ -1,4 +1,4 @@
 *.swp
 *.pyc
-assignment1/.env/*
-assignment1/cs231n/datasets/cifar-10-batches-py
+**/.env/*
+**/datasets/cifar-10-batches-py
